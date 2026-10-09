@@ -16,23 +16,23 @@ function update(){ $('balance').textContent=fmt(balance);$('bet').textContent=fm
 function spin(){if(spinning)return;if(balance<bet){$('status').textContent='Not enough demo credits. Press RESET to start again.';auto=false;updateAuto();return}spinning=true;const usingFreeSpin=freeSpins>0;if(usingFreeSpin)freeSpins--;else balance-=bet;lastWin=0;update();$('status').textContent=usingFreeSpin?'🎁 Free spin in progress…':'The reels are spinning…';let ticks=0;const timer=setInterval(()=>{draw(newGrid());ticks++;if(ticks>=10){clearInterval(timer);const g=newGrid(),result=evaluate(g);draw(g,result.cells);balance+=result.win;lastWin=result.win;spinning=false;let bonus='';if(result.logos>=3){freeSpins+=8;bonus=' 🦐 3+ HAHA logos! You won 8 FREE SPINS!';}$('status').textContent=(result.win>0?'🎉 WIN '+fmt(result.win)+' demo credits!':'No win this time.')+(usingFreeSpin?' Free spin used.':'')+bonus+(freeSpins>0?' Free spins remaining: '+freeSpins+'.':'');update();if(auto&&balance>=bet)autoTimer=setTimeout(spin,650);else if(auto){auto=false;updateAuto()}}},75)}
 function updateAuto(){$('auto').textContent='AUTO: '+(auto?'ON':'OFF');$('auto').style.background=auto?'linear-gradient(#ffd966,#b96b00)':''}
 
-function simulateRtp(paidSpins){
+function simulateRtp(paidSpins,useScale=false){
  let totalWager=paidSpins*bet,totalWin=0,spins=0;
  for(let i=0;i<paidSpins;i++){
   let queue=0,rounds=0;
-  const base=evaluate(newGrid(),bet,false);totalWin+=base.win;spins++;
+  const base=evaluate(newGrid(),bet,useScale);totalWin+=base.win;spins++;
   if(base.logos>=3)queue+=8;
-  while(queue>0&&rounds<1000){queue--;rounds++;const free=evaluate(newGrid(),bet,false);totalWin+=free.win;spins++;if(free.logos>=3)queue+=8;}
+  while(queue>0&&rounds<1000){queue--;rounds++;const free=evaluate(newGrid(),bet,useScale);totalWin+=free.win;spins++;if(free.logos>=3)queue+=8;}
  }
  return {rtp:totalWager?totalWin/totalWager:0,totalWin,totalWager,spins};
 }
 function calibrateRtp(){
  const button=$('calibrate'),state=$('rtpstate');button.disabled=true;state.textContent='Simulating 30,000 paid spins plus awarded free spins…';
  setTimeout(()=>{
-  const base=simulateRtp(30000);
+  const base=simulateRtp(30000,false);
   if(!Number.isFinite(base.rtp)||base.rtp<=0){state.textContent='Calibration failed. Try again.';button.disabled=false;return}
   payoutScale=TARGET_RTP/base.rtp;
-  const check=simulateRtp(30000);
+  const check=simulateRtp(30000,true);
   state.innerHTML='Target: <b>99.00%</b><br>Base simulation: <b>'+fmt(base.rtp*100)+'%</b><br>Payout scale applied: <b>'+payoutScale.toFixed(4)+'×</b><br>Independent verification simulation: <b>'+fmt(check.rtp*100)+'%</b><br><br>Calibration applied to this browser session. Results fluctuate between simulations.';
   button.disabled=false;
  },30);
